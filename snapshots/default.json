@@ -37,6 +37,18 @@
                         }
                     ]
                 }
+            },
+            {
+                "key": 1002,
+                "value": {
+                    "attribute_set": [
+                        {
+                            "attribute": [
+                                "physics"
+                            ]
+                        }
+                    ]
+                }
             }
         ],
         "read_acl": {
@@ -73,5 +85,8 @@
     "sample.ClientData": {
         "input_state": 0.5
     },
-    "sample.Login": {}
+    "sample.Login": {},
+    "sample.TestComponent": {
+        "test_value":5
+    }
 }

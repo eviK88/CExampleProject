@@ -21,3 +21,8 @@ component ClientData {
   float input_state = 1;
   command AddCommandResponse test_command(AddCommandRequest);
 }
+
+component TestComponent {
+  id = 1002;
+  int32 test_value = 1;
+}

@@ -45,8 +45,10 @@
           "working_path": "cmake_build",
           "command": "cmake",
           "arguments": [
-            "-A",
+		      	"-A",
             "x64",
+            "-G",
+            "Visual Studio 15 2017",
             ".."
           ],
           "target": "windows"

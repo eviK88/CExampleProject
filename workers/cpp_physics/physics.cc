@@ -11,7 +11,7 @@
 #include <improbable/standard_library.h>
 #include <client_data.h>
 
-using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, improbable::EntityAcl, sample::Login, sample::ClientData>;
+using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, improbable::EntityAcl, sample::Login, sample::ClientData, sample::TestComponent>;
 
 const int kErrorExitStatus = 1;
 const std::uint32_t kOpListTimeoutMs = 100;
@@ -70,6 +70,10 @@ int main(int argc, char** argv) {
         improbable::EntityAcl::Update acl_update;
         auto current_write_acl = view.Entities[entityId].Get<improbable::EntityAcl>()->component_write_acl();
         current_write_acl[sample::ClientData::ComponentId] = improbable::WorkerRequirementSet({{{op.CallerAttributeSet[1]}}});
+
+		//If I give the write access to CWorker I can not update anymore TestComponent anymore (Only one Worker can have write authority over the same component)
+		//current_write_acl[sample::TestComponent::ComponentId] = improbable::WorkerRequirementSet({ {{op.CallerAttributeSet[1]}} });
+
         acl_update.set_component_write_acl(current_write_acl);
         connection.SendComponentUpdate<improbable::EntityAcl>(entityId, acl_update);
     });
@@ -81,6 +85,7 @@ int main(int argc, char** argv) {
 
     int tick_count = 0;
     float angle = 0;
+	int testValue = 0;
     while (is_connected) {
         view.Process(connection.GetOpList(kOpListTimeoutMs));
 
@@ -89,14 +94,23 @@ int main(int argc, char** argv) {
         improbable::Position::Update position_update;
         position_update.set_coords({sin(angle) * 10, 0.0, cos(angle) * 10});
         connection.SendComponentUpdate<improbable::Position>(entityId, position_update);
-
+		connection.SendLogMessage(worker::LogLevel::kInfo, "Physics", "Position Update");
         // Sleep for some time.
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+       // std::this_thread::sleep_for(std::chrono::seconds(1));
+
+		sample::TestComponent::Update test_update;
+		
+		testValue += 1;
+		test_update.set_test_value({testValue});
+		connection.SendComponentUpdate<sample::TestComponent>(entityId, test_update);
+		connection.SendLogMessage(worker::LogLevel::kInfo, "Physics", "TestComponent Update");
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 
         // Send a command every 2 ticks.
-        if (tick_count++ % 2 == 0) {
+        /*if (tick_count++ % 2 == 0) {
             connection.SendCommandRequest<sample::ClientData::Commands::TestCommand>(entityId, {10, 1.5f}, {});
-        }
+			connection.SendLogMessage(worker::LogLevel::kInfo, "Physics", "Sending Command request for ClientData 10 - 1.5");
+        }*/
     }
 
     return kErrorExitStatus;

@@ -9,6 +9,7 @@
 #define POSITION_COMPONENT_ID 54
 #define LOGIN_COMPONENT_ID 1000
 #define CLIENTDATA_COMPONENT_ID 1001
+#define TESTCOMPONENT_COMPONENT_ID 1002
 
 char* GenerateWorkerId(char* worker_id_prefix) {
   /* Calculate buffer size. */
@@ -35,22 +36,29 @@ void OnEntityQueryResponse(const Worker_EntityQueryResponseOp* op) {
   printf("entity query result: %d entities. Status: %d. Results: %p\n", op->result_count,
          op->status_code, (void*)op->results);
   if (op->results) {
-    for (uint32_t i = 0; i < op->result_count; ++i) {
-      const Worker_Entity* entity = &op->results[i];
-      printf("- entity %" PRId64 " with %d components", entity->entity_id, entity->component_count);
-      for (uint32_t k = 0; k < entity->component_count; ++k) {
-        if (entity->components[k].component_id == POSITION_COMPONENT_ID) {
-          Schema_Object* coords_object =
-              Schema_GetObject(Schema_GetComponentDataFields(entity->components[k].schema_type), 1);
-          double x = Schema_GetDouble(coords_object, 1);
-          double y = Schema_GetDouble(coords_object, 2);
-          double z = Schema_GetDouble(coords_object, 3);
-          printf(": Position: (%f, %f, %f)\n", x, y, z);
-        }
-      }
-      if (entity->component_count == 0) {
-        printf("\n");
-      }
+	  for (uint32_t i = 0; i < op->result_count; ++i) {
+		  const Worker_Entity* entity = &op->results[i];
+		  printf("- entity %" PRId64 " with %d components", entity->entity_id, entity->component_count);
+		  for (uint32_t k = 0; k < entity->component_count; ++k) {
+			  if (entity->components[k].component_id == POSITION_COMPONENT_ID) {
+				  Schema_Object* coords_object =
+					  Schema_GetObject(Schema_GetComponentDataFields(entity->components[k].schema_type), 1);
+				  double x = Schema_GetDouble(coords_object, 1);
+				  double y = Schema_GetDouble(coords_object, 2);
+				  double z = Schema_GetDouble(coords_object, 3);
+				  printf(": Position: (%f, %f, %f)\n", x, y, z);
+			  }
+
+			  if (entity->components[k].component_id == TESTCOMPONENT_COMPONENT_ID) {
+				  Schema_Object* test_object =
+					  Schema_GetObject(Schema_GetComponentDataFields(entity->components[k].schema_type), 1);
+				  double x = Schema_GetUint32(test_object, 1);
+				  printf(": Test Component: (%d)\n", x);
+			  }
+	  }
+		  if (entity->component_count == 0) {
+			  printf("\n");
+		  }
     }
   }
 }
@@ -83,6 +91,16 @@ void OnComponentUpdate(const Worker_ComponentUpdateOp* op) {
     double y = Schema_GetDouble(coords_object, 2);
     double z = Schema_GetDouble(coords_object, 3);
     printf("received improbable.Position update: (%f, %f, %f)\n", x, y, z);
+  }
+
+  if (op->update.component_id == TESTCOMPONENT_COMPONENT_ID) {
+	  /* Received TestComponent update */
+	  Schema_Object* test_objectFields = Schema_GetComponentUpdateFields(op->update.schema_type);
+	  if (Schema_GetInt32Count(test_objectFields, 1) == 1) {
+		int x = Schema_GetInt32(test_objectFields, 1);
+		printf("Received improbable.TestComponent update: %d \n", x);
+	}
+	  
   }
 }
 
@@ -148,7 +166,7 @@ int main(int argc, char** argv) {
   query.constraint.constraint.entity_id_constraint.entity_id = 1;
   query.result_type = WORKER_RESULT_TYPE_SNAPSHOT;
   query.snapshot_result_type_component_id_count = 1;
-  Worker_ComponentId position_component_id = POSITION_COMPONENT_ID;
+  Worker_ComponentId position_component_id = TESTCOMPONENT_COMPONENT_ID;
   query.snapshot_result_type_component_ids = &position_component_id;
   Worker_Connection_SendEntityQueryRequest(connection, &query, NULL);
 
@@ -161,6 +179,7 @@ int main(int argc, char** argv) {
   Worker_CommandParameters command_parameters;
   command_parameters.allow_short_circuit = 0;
   Worker_Connection_SendCommandRequest(connection, 1, &command_request, NULL, &command_parameters);
+  
 
   /* Main loop. */
   while (1) {
